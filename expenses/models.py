@@ -71,7 +71,7 @@ class Payment(models.Model):
         on_delete=models.CASCADE,
         related_name='payments_received'
     )
-    group = models.ForeignKey('groups.Group', on_delete=models.SET_NULL, null=True, blank=True, related_name='payments')
+    group = models.ForeignKey('groups.Group', on_delete=models.SET_NULL, null=True, blank=True, related_name='expense_payments')
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     currency = models.CharField(max_length=3, choices=Expense.CURRENCY_CHOICES, default='INR')
     description = models.TextField(blank=True, null=True)

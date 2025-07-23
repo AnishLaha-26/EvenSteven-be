@@ -20,6 +20,7 @@ class UserRegistrationView(generics.CreateAPIView):
         
         return Response({
             'user': {
+                'id': user.id,
                 'email': user.email,
                 'first_name': user.first_name,
                 'last_name': user.last_name,
@@ -43,6 +44,7 @@ class UserLoginView(APIView):
         
         return Response({
             'user': {
+                'id': user.id,
                 'email': user.email,
                 'first_name': user.first_name,
                 'last_name': user.last_name,

@@ -5,3 +5,6 @@ class GroupsConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'groups'
     verbose_name = 'Groups Management'
+    
+    def ready(self):
+        import groups.signals

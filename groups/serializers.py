@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import Group, GroupMember
+from .models import Group, GroupMember, Transaction
 
 User = get_user_model()
 
@@ -21,8 +21,20 @@ class GroupMemberSerializer(serializers.ModelSerializer):
         model = GroupMember
         fields = ['id', 'user', 'role', 'status', 'balance', 'joined_at']
 
+class TransactionSerializer(serializers.ModelSerializer):
+    payer = UserSerializer(read_only=True)
+    participants = UserSerializer(many=True, read_only=True)
+    
+    class Meta:
+        model = Transaction
+        fields = [
+            'id', 'description', 'amount', 'payer', 'participants', 
+            'category', 'date', 'status', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['created_at', 'updated_at']
+
 class GroupSerializer(serializers.ModelSerializer):
-    members = GroupMemberSerializer(many=True, read_only=True)
+    memberships = GroupMemberSerializer(many=True, read_only=True)
     admin = UserSerializer(read_only=True)
     created_by = UserSerializer(read_only=True)
 
@@ -30,6 +42,8 @@ class GroupSerializer(serializers.ModelSerializer):
         model = Group
         fields = [
             'id', 'name', 'description', 'created_by', 'created_at', 'updated_at',
-            'status', 'currency', 'admin', 'members', 'join_code'
+            'status', 'currency', 'admin', 'memberships', 'join_code'
         ]
         read_only_fields = ['join_code', 'created_at', 'updated_at']
+
+

@@ -56,6 +56,16 @@ class Group(models.Model):
     def remove_member(self, user):
         """Remove a user from the group."""
         return GroupMember.objects.filter(user=user, group=self).delete()
+    
+    def get_balance_summary(self):
+        """Get balance summary for all members in this group."""
+        from .balance_manager import BalanceManager
+        return BalanceManager.get_group_balance_summary(self)
+    
+    def update_all_balances(self):
+        """Update balances for all active members in this group."""
+        from .balance_manager import BalanceManager
+        return BalanceManager.update_all_group_balances(self)
 
     class Meta:
         ordering = ['-created_at']
@@ -178,7 +188,7 @@ class GroupInvitation(models.Model):
 
 
 class GroupPayment(models.Model):
-    group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='payments')
+    group = models.ForeignKey(Group, on_delete=models.CASCADE, related_name='group_payments')
     amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     currency = models.CharField(max_length=3, default='USD')
     created_at = models.DateTimeField(auto_now_add=True)
@@ -189,3 +199,5 @@ class GroupPayment(models.Model):
     
     def __str__(self):
         return f"{self.amount} {self.currency} for {self.group.name}"
+    
+    
