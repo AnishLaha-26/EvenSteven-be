@@ -27,9 +27,9 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-3+p11!qt(n44c9vzk%rku
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-# Railway provides RAILWAY_STATIC_URL, we'll also allow custom domains
+# Render deployment configuration
 ALLOWED_HOSTS = [
-    '.railway.app',  # Allow all Railway subdomains
+    '.onrender.com',  # Allow all Render subdomains
     'localhost',
     '127.0.0.1',
 ]
@@ -155,7 +155,7 @@ WSGI_APPLICATION = 'evensteven.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-# Database configuration for Railway
+# Database configuration for Render
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
@@ -167,7 +167,7 @@ DATABASES = {
     }
 }
 
-# Railway provides DATABASE_URL, use it if available
+# Render provides DATABASE_URL, use it if available
 if config('DATABASE_URL', default=''):
     import dj_database_url
     DATABASES['default'] = dj_database_url.parse(config('DATABASE_URL'))
