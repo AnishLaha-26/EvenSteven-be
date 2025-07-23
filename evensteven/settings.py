@@ -54,6 +54,7 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:3002',
     'http://localhost:3000',
     'http://172.27.19.63:3001',
+    'https://even-steven-fe.vercel.app',  # Production frontend
 ]
 
 # Add production CORS origins from environment variable
@@ -251,5 +252,3 @@ LOGGING = {
         },
     },
 }
-
-
