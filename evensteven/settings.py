@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+from decouple import config
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,12 +22,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-3+p11!qt(n44c9vzk%rkuavyh!8s_hsmv6f@oc$y&lzzbx1kf*'
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-3+p11!qt(n44c9vzk%rkuavyh!8s_hsmv6f@oc$y&lzzbx1kf*')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = ['*']  # Allow all hosts for development - use specific IPs in production
+# Railway provides RAILWAY_STATIC_URL, we'll also allow custom domains
+ALLOWED_HOSTS = [
+    '.railway.app',  # Allow all Railway subdomains
+    'localhost',
+    '127.0.0.1',
+]
+
+# Add custom domains from environment variable
+if config('ALLOWED_HOSTS', default=''):
+    ALLOWED_HOSTS.extend(config('ALLOWED_HOSTS').split(','))
 
 # REST Framework settings
 REST_FRAMEWORK = {
@@ -44,7 +55,16 @@ CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'http://172.27.19.63:3001',
 ]
+
+# Add production CORS origins from environment variable
+if config('CORS_ALLOWED_ORIGINS', default=''):
+    CORS_ALLOWED_ORIGINS.extend(config('CORS_ALLOWED_ORIGINS').split(','))
+
 CORS_ALLOW_CREDENTIALS = True
+
+# For production, you might want to be more restrictive
+if not DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = config('CORS_ALLOW_ALL_ORIGINS', default=False, cast=bool)
 
 # JWT Settings
 from datetime import timedelta
@@ -102,6 +122,7 @@ MEDIA_URL = 'media/'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # For serving static files
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -134,12 +155,22 @@ WSGI_APPLICATION = 'evensteven.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# Database configuration for Railway
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('PGDATABASE', default=config('DB_NAME', default='evensteven_db')),
+        'USER': config('PGUSER', default=config('DB_USER', default='postgres')),
+        'PASSWORD': config('PGPASSWORD', default=config('DB_PASSWORD', default='')),
+        'HOST': config('PGHOST', default=config('DB_HOST', default='localhost')),
+        'PORT': config('PGPORT', default=config('DB_PORT', default='5432')),
     }
 }
+
+# Railway provides DATABASE_URL, use it if available
+if config('DATABASE_URL', default=''):
+    import dj_database_url
+    DATABASES['default'] = dj_database_url.parse(config('DATABASE_URL'))
 
 
 # Password validation
@@ -176,11 +207,49 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+# WhiteNoise configuration for serving static files
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Security settings for production
+if not DEBUG:
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_REDIRECT_EXEMPT = []
+    SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    USE_TZ = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Logging configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': config('DJANGO_LOG_LEVEL', default='INFO'),
+            'propagate': False,
+        },
+    },
+}
 
 
