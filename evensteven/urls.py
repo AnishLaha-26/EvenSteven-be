@@ -23,4 +23,5 @@ urlpatterns = [
     path('api/auth/', include('users.urls')),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/groups/', include('groups.urls')),
+    path('api/expenses/', include('expenses.urls')),  # Include expenses URLs
 ]

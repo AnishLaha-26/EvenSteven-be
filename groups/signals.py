@@ -4,6 +4,10 @@ from .models import GroupMember, Group
 from .balance_manager import BalanceManager
 from expenses.models import Expense, ExpenseSplit, Payment
 from settlements.models import Settlement
+import threading
+
+# Thread-local storage to prevent signal recursion
+_thread_locals = threading.local()
 
 
 @receiver(post_save, sender=GroupMember)
@@ -80,11 +84,16 @@ def update_balances_on_settlement_delete(sender, instance, **kwargs):
 @receiver(post_save, sender=GroupMember)
 def handle_member_status_change(sender, instance, created, **kwargs):
     """Handle balance updates when member status changes."""
+    # Skip balance updates during member creation to avoid recursion
+    # Balance initialization is handled separately
+    if not created and hasattr(instance, '_skip_balance_update'):
+        return
+        
     if not created:  # Only for updates, not creation
         # If member is being removed or deactivated, we might want to settle their balance
         if instance.status in ['removed', 'inactive']:
             # For now, just recalculate all group balances to ensure consistency
             BalanceManager.update_all_group_balances(instance.group)
         elif instance.status == 'active':
-            # If member is being reactivated, initialize their balance
+            # If member is being reactivated, update their balance
             BalanceManager.update_member_balance(instance.group, instance.user)

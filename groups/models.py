@@ -105,6 +105,21 @@ class GroupMember(models.Model):
     
     def __str__(self):
         return f"{self.user.email} - {self.group.name} ({self.role})"
+    
+    def update_balance(self):
+        """Update this member's balance based on all transactions."""
+        from .balance_manager import BalanceManager
+        return BalanceManager.update_member_balance(self.group, self.user)
+    
+    def get_balance_details(self):
+        """Get detailed balance information for this member."""
+        from .balance_manager import BalanceManager
+        return BalanceManager.get_member_balance_details(self.group, self.user)
+    
+    def get_current_balance(self):
+        """Get the current calculated balance for this member."""
+        from .balance_manager import BalanceManager
+        return BalanceManager.calculate_member_balance(self.group, self.user)
 
 class GroupSettings(models.Model):
     group = models.OneToOneField(Group, on_delete=models.CASCADE, related_name='settings')

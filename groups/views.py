@@ -10,6 +10,13 @@ from rest_framework import mixins
 from rest_framework.viewsets import GenericViewSet
 from .models import Group, GroupMember, Transaction
 from .serializers import GroupSerializer, GroupMemberSerializer, TransactionSerializer
+from .balance_manager import BalanceManager
+from .balance_serializers import (
+    GroupBalanceSummarySerializer,
+    GroupBalanceSummaryFromUserPerspectiveSerializer,
+    MemberBalanceDetailSerializer,
+    BalanceUpdateSerializer
+)
 
 User = get_user_model()
 
@@ -242,6 +249,75 @@ class GroupViewSet(mixins.CreateModelMixin,
         transactions = group.transactions.all()[:20]
         
         serializer = TransactionSerializer(transactions, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'], url_path='balance-summary')
+    def balance_summary(self, request, pk=None):
+        """Get balance summary for all members in the group from current user's perspective."""
+        group = self.get_object()
+        
+        # Check if user is a member of the group
+        if not GroupMember.objects.filter(user=request.user, group=group).exists():
+            return Response(
+                {'error': 'You are not a member of this group'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Get balance summary from current user's perspective
+        summary = BalanceManager.get_group_balance_summary_for_user(group, request.user)
+        serializer = GroupBalanceSummaryFromUserPerspectiveSerializer(summary)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['get'], url_path='my-balance')
+    def my_balance(self, request, pk=None):
+        """Get detailed balance information for the current user in the group."""
+        group = self.get_object()
+        
+        # Check if user is a member of the group
+        if not GroupMember.objects.filter(user=request.user, group=group).exists():
+            return Response(
+                {'error': 'You are not a member of this group'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Get detailed balance for current user
+        balance_details = BalanceManager.get_member_balance_details(group, request.user)
+        if not balance_details:
+            return Response(
+                {'error': 'Balance information not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        serializer = MemberBalanceDetailSerializer(balance_details)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['post'], url_path='update-balances')
+    def update_balances(self, request, pk=None):
+        """Update balances for all members in the group (admin only)."""
+        group = self.get_object()
+        
+        # Check if user is an admin of the group
+        if not GroupMember.objects.filter(
+            user=request.user,
+            group=group,
+            role='admin'
+        ).exists():
+            return Response(
+                {'error': 'Only admins can update group balances'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Update all balances
+        updated_members = BalanceManager.update_all_group_balances(group)
+        updated_user_ids = [member.user.id for member in updated_members]
+        
+        response_data = {
+            'success': True,
+            'message': f'Updated balances for {len(updated_members)} members',
+            'updated_members': updated_user_ids
+        }
+        
+        serializer = BalanceUpdateSerializer(response_data)
         return Response(serializer.data)
 
 class GroupMemberViewSet(viewsets.ModelViewSet):
